@@ -194,6 +194,7 @@ export const FOOTER_SECTIONS: FooterSection[] = [
             className: "feedback-link",
             target: "_blank",
             rel: "noopener noreferrer",
+            style: { color: "#0066cc", textDecoration: "underline" },
           },
           "Google Form"
         )

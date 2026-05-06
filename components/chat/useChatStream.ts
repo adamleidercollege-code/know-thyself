@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { ChatMessage } from "./types";
+import { sanitizeAssistantText } from "./sanitize";
 
 type Status = "idle" | "streaming" | "tool_received" | "error";
 
@@ -33,6 +34,27 @@ export function useChatStream(initial: ChatMessage[] = []) {
     let toolInputBuffer = "";
     let toolName: string | null = null;
     let stopReason: string | null = null;
+    let streamDone = false;
+
+    let displayed = "";
+    const pumpDone = new Promise<void>((resolve) => {
+      const id = setInterval(() => {
+        const target = sanitizeAssistantText(assistantText);
+        if (displayed.length < target.length) {
+          const remaining = target.length - displayed.length;
+          const step = remaining > 200 ? 8 : remaining > 80 ? 4 : remaining > 30 ? 2 : 1;
+          displayed = target.slice(0, displayed.length + step);
+          setPending(displayed);
+        } else if (streamDone) {
+          clearInterval(id);
+          resolve();
+        }
+      }, 20);
+      ctrl.signal.addEventListener("abort", () => {
+        clearInterval(id);
+        resolve();
+      });
+    });
 
     try {
       const res = await fetch("/api/chat", {
@@ -84,7 +106,6 @@ export function useChatStream(initial: ChatMessage[] = []) {
             toolInputBuffer = "";
           } else if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
             assistantText += evt.delta.text ?? "";
-            setPending(assistantText);
           } else if (evt.type === "content_block_delta" && evt.delta?.type === "input_json_delta") {
             toolInputBuffer += evt.delta.partial_json ?? "";
           } else if (evt.type === "message_delta") {
@@ -94,12 +115,17 @@ export function useChatStream(initial: ChatMessage[] = []) {
         }
       }
     } catch (err) {
+      streamDone = true;
+      await pumpDone;
       const msg = err instanceof Error ? err.message : "stream error";
       setError(msg);
       setStatus("error");
       setPending(null);
       return;
     }
+
+    streamDone = true;
+    await pumpDone;
 
     if (assistantText) {
       setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);

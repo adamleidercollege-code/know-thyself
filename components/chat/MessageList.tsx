@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "./types";
+import { sanitizeAssistantText } from "./sanitize";
 
 type Props = {
   messages: ChatMessage[];
@@ -12,7 +13,9 @@ type Props = {
 export function MessageList({ messages, pending, showTypingIndicator }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior: "smooth" });
+    const el = ref.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [messages, pending, showTypingIndicator]);
 
   return (
@@ -20,7 +23,10 @@ export function MessageList({ messages, pending, showTypingIndicator }: Props) {
       ref={ref}
       style={{
         flex: 1,
+        minHeight: 0,
         overflowY: "auto",
+        overflowX: "hidden",
+        overflowAnchor: "none",
         padding: "24px 16px",
         display: "flex",
         flexDirection: "column",
@@ -28,7 +34,7 @@ export function MessageList({ messages, pending, showTypingIndicator }: Props) {
       }}
     >
       {messages.map((m, i) => (
-        <Bubble key={i} role={m.role} content={m.content} />
+        <Bubble key={i} role={m.role} content={m.role === "assistant" ? sanitizeAssistantText(m.content) : m.content} />
       ))}
       {pending !== undefined && <Bubble role="assistant" content={pending} />}
       {showTypingIndicator && messages[messages.length - 1]?.role === "user" && pending === undefined && (
@@ -54,6 +60,8 @@ function Bubble({ role, content }: { role: "user" | "assistant"; content: string
         lineHeight: 1.55,
         color: "var(--color-ink)",
         whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+        minHeight: isUser ? undefined : "1.55em",
       }}
     >
       {content}
