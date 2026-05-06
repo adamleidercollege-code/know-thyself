@@ -189,8 +189,13 @@ export const FOOTER_SECTIONS: FooterSection[] = [
         "Share your feedback → ",
         React.createElement(
           "a",
-          { href: "#", className: "feedback-link" },
-          "(Google Form link to be provided)"
+          {
+            href: "https://docs.google.com/forms/d/e/1FAIpQLSfieemLKiDxwl4kKB34ZqghdinBFdFWYgwhNNZrCBepIegpHg/viewform?usp=header",
+            className: "feedback-link",
+            target: "_blank",
+            rel: "noopener noreferrer",
+          },
+          "Google Form"
         )
       )
     ),
