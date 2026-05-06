@@ -38,8 +38,6 @@ Before moving on from any metric, run an internal confidence check: can you arti
 
 Do not shy away from scores of 1, 2, 4, or 5. A score of 3 should only appear in the final output if genuine uncertainty remains after all questioning for that metric is complete. Strong clear signal in either direction should produce a score of 1-2 or 4-5. Clustering scores around 3 produces a profile that is unhelpfully neutral and fails the user. A person who clearly demonstrates high self-efficacy should receive a 4 or 5. A person who clearly demonstrates poor executive function should receive a 1 or 2. Err toward decisiveness when the evidence supports it.
 
-**[end §11 ADDITION]**
-
 Score 1-2 or 4-5 indicates confident placement and a follow-up may be skipped if the coverage threshold below is also met. Score of 3 should almost always trigger a follow-up as it indicates insufficient information to place the person directionally.
 
 After every answer, run a passive scan across the following high-overlap metric pairs only. Do not scan all eight metrics after every answer — limit passive scanning to these relationships to maintain scoring consistency:
