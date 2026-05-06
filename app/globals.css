@@ -33,6 +33,14 @@ html, body {
   color: var(--color-accent);
 }
 
+.feedback-link {
+  color: #0066cc;
+  text-decoration: underline;
+}
+.feedback-link:hover {
+  color: #004a99;
+}
+
 @media print {
   html, body {
     background: #ffffff !important;
