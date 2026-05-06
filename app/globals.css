@@ -34,5 +34,29 @@ html, body {
 }
 
 @media print {
-  /* Print styles applied in Task 22 */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide nav and footer */
+  .kt-footer-bar { display: none !important; }
+  [aria-label="Previous slide"], [aria-label="Next slide"] { display: none !important; }
+  .kt-print-button { display: none !important; }
+
+  /* Force-expand any collapsed Read more panels by surfacing all paragraphs */
+  [aria-expanded="false"] + * { display: block !important; }
+  [aria-expanded="false"]::after {
+    content: " (expanded for print)";
+    font-style: italic;
+    color: #666;
+    font-size: 10px;
+  }
+
+  /* Page-break hints */
+  section, .kt-mgrid-full > * { break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; }
+
+  /* Tighten layout for paper */
+  body { font-size: 11pt; line-height: 1.5; }
 }
