@@ -18,6 +18,13 @@ export function MessageList({ messages, pending, showTypingIndicator }: Props) {
     el.scrollTop = el.scrollHeight;
   }, [messages, pending, showTypingIndicator]);
 
+  const hasPendingText = pending !== undefined && pending.length > 0;
+  const lastIsUser = messages[messages.length - 1]?.role === "user";
+  const showWaiting =
+    !hasPendingText &&
+    lastIsUser &&
+    (pending === "" || (showTypingIndicator && pending === undefined));
+
   return (
     <div
       ref={ref}
@@ -33,12 +40,25 @@ export function MessageList({ messages, pending, showTypingIndicator }: Props) {
         gap: 18,
       }}
     >
-      {messages.map((m, i) => (
-        <Bubble key={i} role={m.role} content={m.role === "assistant" ? sanitizeAssistantText(m.content) : m.content} />
-      ))}
-      {pending !== undefined && <Bubble role="assistant" content={pending} />}
-      {showTypingIndicator && messages[messages.length - 1]?.role === "user" && pending === undefined && (
-        <div style={{ alignSelf: "flex-start", color: "var(--color-tertiary)", fontStyle: "italic" }}>…</div>
+      {messages.map((m, i) => {
+        const content = m.role === "assistant" ? sanitizeAssistantText(m.content) : m.content;
+        if (m.role === "assistant" && !content) return null;
+        return <Bubble key={i} role={m.role} content={content} />;
+      })}
+      {hasPendingText && <Bubble role="assistant" content={pending!} />}
+      {showWaiting && (
+        <div
+          style={{
+            alignSelf: "flex-start",
+            color: "var(--color-tertiary)",
+            fontStyle: "italic",
+            fontFamily: "var(--font-serif)",
+            fontSize: 16,
+            lineHeight: 1.55,
+          }}
+        >
+          …
+        </div>
       )}
     </div>
   );
@@ -61,7 +81,6 @@ function Bubble({ role, content }: { role: "user" | "assistant"; content: string
         color: "var(--color-ink)",
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
-        minHeight: isUser ? undefined : "1.55em",
       }}
     >
       {content}

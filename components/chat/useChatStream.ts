@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "./types";
 import { sanitizeAssistantText } from "./sanitize";
 
 type Status = "idle" | "streaming" | "tool_received" | "error";
 
 type ToolPayload = { toolName: string; input: unknown };
+
+const MAX_INVISIBLE_RETRIES = 2;
 
 export function useChatStream(initial: ChatMessage[] = []) {
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
@@ -15,6 +17,8 @@ export function useChatStream(initial: ChatMessage[] = []) {
   const [tool, setTool] = useState<ToolPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const invisibleRetriesRef = useRef(0);
+  const sendRef = useRef<((userText: string | null) => Promise<void>) | null>(null);
 
   const send = useCallback(async (userText: string | null) => {
     setError(null);
@@ -23,6 +27,7 @@ export function useChatStream(initial: ChatMessage[] = []) {
     if (userText !== null) {
       nextHistory = [...messages, { role: "user" as const, content: userText }];
       setMessages(nextHistory);
+      invisibleRetriesRef.current = 0;
     }
     setPending("");
     setStatus("streaming");
@@ -39,13 +44,20 @@ export function useChatStream(initial: ChatMessage[] = []) {
     let displayed = "";
     const pumpDone = new Promise<void>((resolve) => {
       const id = setInterval(() => {
-        const target = sanitizeAssistantText(assistantText);
+        const target = sanitizeAssistantText(assistantText, !streamDone);
+        if (displayed.length > target.length) {
+          displayed = target;
+          setPending(displayed);
+          return;
+        }
         if (displayed.length < target.length) {
           const remaining = target.length - displayed.length;
           const step = remaining > 200 ? 8 : remaining > 80 ? 4 : remaining > 30 ? 2 : 1;
           displayed = target.slice(0, displayed.length + step);
           setPending(displayed);
-        } else if (streamDone) {
+          return;
+        }
+        if (streamDone) {
           clearInterval(id);
           resolve();
         }
@@ -141,10 +153,29 @@ export function useChatStream(initial: ChatMessage[] = []) {
         setError(err instanceof Error ? err.message : "bad tool JSON");
         setStatus("error");
       }
-    } else {
-      setStatus("idle");
+      return;
     }
+
+    // If the model emitted only scorecard/non-visible text, automatically
+    // re-prompt so the user gets the next question without having to type
+    // a filler message. Cap retries to avoid loops. Defer to a macrotask so
+    // the just-scheduled setMessages commit before sendRef.current is read —
+    // otherwise the retry would refetch with stale history.
+    const visible = sanitizeAssistantText(assistantText);
+    if (assistantText && !visible && invisibleRetriesRef.current < MAX_INVISIBLE_RETRIES) {
+      invisibleRetriesRef.current += 1;
+      setTimeout(() => {
+        void sendRef.current?.(null);
+      }, 0);
+      return;
+    }
+    invisibleRetriesRef.current = 0;
+    setStatus("idle");
   }, [messages]);
+
+  useEffect(() => {
+    sendRef.current = send;
+  }, [send]);
 
   const retryLast = useCallback(() => {
     setMessages((prev) => {
