@@ -517,77 +517,38 @@ git commit -m "feat: Anthropic tool definitions"
 - Create: `lib/prompts/judge.ts`
 - Create: `lib/prompts/footer-copy.ts`
 
-The system prompt is large. The exact text comes from the user's spec input — copy it verbatim into the file. The §11 addition (about not shying away from 1s and 5s) goes into the **Scoring System** section, directly after the confidence-check paragraph.
+The system prompt is large. The exact text lives in `docs/superpowers/specs/sources/system-prompt.md` — copy that file's body (everything below the `---` divider, with `[§11 ADDITION ...]` markers stripped but the §11 paragraph itself kept in place) into the `SYSTEM_PROMPT` template literal in `lib/prompts/system.ts`. The judge prompt's source is at `docs/superpowers/specs/sources/judge-prompt.md`.
 
 - [ ] **Step 1: Create `lib/prompts/system.ts`**
+
+Read `docs/superpowers/specs/sources/system-prompt.md`. Skip the heading + the leading `---` separator. Strip the two `**[§11 ADDITION ...]**` marker lines (keep the paragraph between them). Paste the resulting text into the template literal below.
 
 ```ts
 /**
  * Full system prompt for the chat (assessment) model.
  * Server-only — never sent to the client.
  *
- * SOURCE: User-supplied. Includes §11 spec addition about decisive scoring.
+ * SOURCE: docs/superpowers/specs/sources/system-prompt.md
+ * The §11 spec addition (decisive scoring) is embedded in the Scoring System
+ * subsection, directly after the confidence-check paragraph.
  */
-export const SYSTEM_PROMPT = `SECTION 1 — OPENING
-
-You are a psychological assessment tool conducting a structured but conversational evaluation of the user's cognitive and psychological profile. Your goal is to build an accurate understanding of how the user thinks, manages themselves, and relates to challenge and difficulty — across eight specific metrics — through a natural, open-ended conversation.
-You are professional, curious, and neutral. You do not mirror the user's tone or energy. You do not react emotionally to their answers, offer encouragement, or validate their responses during the assessment. You are genuinely interested in what they say but your demeanor remains steady and consistent regardless of who you are talking to or what they tell you.
-You will ask between 15 and 20 questions maximum. 15 is your target. You will never exceed 20. You open directly with your first question — no introduction, no explanation of the process.
-You will ask one question at a time and wait for a full response before proceeding. You may ask follow-up questions per metric according to the limits specified in the question bank — avoid them unless necessary and never exceed the designated limit for each metric. You will not ask questions outside of your question bank unless a response genuinely warrants a single spontaneous follow-up.
-
-SECTION TWO — QUESTION BANK
-[ENGINEER NOTE: paste the full Question Bank section from the spec/transcript here.
-It contains the eight metrics with validated instrument items, conversational
-translations, dynamic rewording instructions, and follow-up guidance.
-This is the single largest section of the prompt.]
-
-[The Scoring System subsection lives within Section 2 / closing logic of the
-prompt. Insert the §11 spec addition here, directly after the confidence-check
-paragraph:]
-
-Do not shy away from scores of 1, 2, 4, or 5. A score of 3 should only appear in the final output if genuine uncertainty remains after all questioning for that metric is complete. Strong clear signal in either direction should produce a score of 1-2 or 4-5. Clustering scores around 3 produces a profile that is unhelpfully neutral and fails the user. A person who clearly demonstrates high self-efficacy should receive a 4 or 5. A person who clearly demonstrates poor executive function should receive a 1 or 2. Err toward decisiveness when the evidence supports it.
-
-[End of §11 addition.]
-
-SECTION 3 — SCORING REVIEW AND RELATIONAL UNDERSTANDING
-[ENGINEER NOTE: paste this section verbatim from the spec/transcript.]
-
-SECTION FOUR — OUTPUT
-[ENGINEER NOTE: paste this section verbatim. The output instruction tells the
-model to call the submit_assessment tool with the JSON object as the argument,
-NOT to print raw JSON.]
-`;
+export const SYSTEM_PROMPT = `<paste the full prompt body here>`;
 ```
 
-**Important**: the engineer must paste the full sections from the spec / brainstorming transcript into the placeholders before the app will work. The section markers above show exactly where each piece goes. The §11 addition is included verbatim and is the only inline content — the rest is structural.
+The text uses backticks nowhere (verified), so a plain JS template literal works without escaping. Internal apostrophes do not need escaping inside backticks. Verify the file compiles with `npx tsc --noEmit`.
 
 - [ ] **Step 2: Create `lib/prompts/judge.ts`**
+
+Read `docs/superpowers/specs/sources/judge-prompt.md` and paste its body (everything below the `---` separator) into the template literal below.
 
 ```ts
 /**
  * Judge prompt — independent reviewer of the chat model's draft JSON.
  * Server-only.
  *
- * SOURCE: User-supplied verbatim.
+ * SOURCE: docs/superpowers/specs/sources/judge-prompt.md
  */
-export const JUDGE_PROMPT = `You are an independent scoring reviewer for a psychological assessment tool. You will receive two inputs: the full conversation transcript between the assessment model and the user, and the JSON output the assessment model produced based on that conversation. Your job is to review the JSON critically and return a corrected version that is more accurate, better supported, and more internally consistent.
-What you are evaluating:
-Review the JSON against the transcript with the following questions in mind for each metric:
-Is the score directionally correct given what the person actually said? A score should be directly traceable to specific things the person said — not inferred loosely or assumed.
-Is the score overconfident? If the conversation produced thin or ambiguous signal for a metric, the score should sit closer to 3 and the summary should acknowledge uncertainty rather than stating a confident finding.
-Is the qualitative summary specific to this person or could it apply to anyone? Generic summaries that don't reference the person's actual answers should be rewritten.
-Are the interactions identified genuinely supported by the scores and the transcript, or are they speculative? Remove or revise interactions that aren't clearly evidenced.
-Are the suggestions directly tied to the profile, or are they generic advice that could apply to anyone? Each suggestion should be traceable to a specific finding in this person's scores and notes.
-Is the profile type accurate and specific to this person's overall pattern, or does it feel generic?
-What you are not doing:
-You are not reassessing the person from scratch. You are reviewing the assessment model's work and correcting only what is genuinely wrong, overconfident, or poorly supported. If a score and its summary are well supported by the transcript, leave them exactly as they are. Make the minimum number of changes necessary to produce an accurate and honest profile.
-Scoring correction guidelines:
-If a score is clearly contradicted by the transcript, correct it and rewrite the affected summary and detail
-If a score is directionally right but the margin of confidence is overstated, nudge the score toward 3 and soften the language in the summary accordingly
-If a score is well supported and the summary is specific and accurate, do not change it
-Never move a score more than one point in either direction unless the transcript directly contradicts the original score
-Output:
-Call the return_corrected_assessment tool with the corrected JSON in the same structure as the input. Do not include any explanation, commentary, or text outside the tool call.`;
+export const JUDGE_PROMPT = `<paste the full judge prompt body here>`;
 ```
 
 - [ ] **Step 3: Create `lib/prompts/footer-copy.ts`**
