@@ -28,6 +28,14 @@ export async function POST(req: Request) {
   }
   const messages = body.messages as ChatMessage[];
 
+  // Anthropic requires messages to begin with a user turn. The assessment is
+  // structured so the model speaks first (the opener), so we prepend a synthetic
+  // user turn that the system prompt instructs the model to ignore.
+  const apiMessages: { role: "user" | "assistant"; content: string }[] = [
+    { role: "user", content: "Begin." },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+  ];
+
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const stream = await client.messages.stream({
@@ -35,7 +43,7 @@ export async function POST(req: Request) {
     max_tokens: CHAT_MAX_TOKENS,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     tools: [SUBMIT_ASSESSMENT_TOOL],
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    messages: apiMessages,
   });
 
   const encoder = new TextEncoder();

@@ -55,9 +55,19 @@ export function useChatStream(initial: ChatMessage[] = []) {
         while ((idx = buf.indexOf("\n\n")) !== -1) {
           const chunk = buf.slice(0, idx);
           buf = buf.slice(idx + 2);
-          const dataLine = chunk.split("\n").find((l) => l.startsWith("data: "));
+          const lines = chunk.split("\n");
+          const eventLine = lines.find((l) => l.startsWith("event: "));
+          const dataLine = lines.find((l) => l.startsWith("data: "));
           if (!dataLine) continue;
           const payload = dataLine.slice(6);
+          if (eventLine?.slice(7) === "error") {
+            let msg = "stream error";
+            try {
+              const parsed = JSON.parse(payload);
+              if (typeof parsed?.message === "string") msg = parsed.message;
+            } catch {}
+            throw new Error(msg);
+          }
           let evt: {
             type?: string;
             delta?: { type?: string; text?: string; partial_json?: string; stop_reason?: string };
