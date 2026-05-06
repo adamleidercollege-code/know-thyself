@@ -321,7 +321,7 @@ Reached via the "View Full Results" button on the Fin slide. State transitions t
 - Metric cards in a two-column grid on desktop, single column on mobile.
 - Suggestions and metric cards both use "Read more" expand for detail (since the page is already long, default-collapsed keeps it scannable).
 - Subtle "← Back to slideshow" link at the very top in Inter small caps, terracotta. Returns to the Fin slide of the slideshow with `slideIndex = lastIndex`.
-- Optional: "Print results" button at the bottom that triggers `window.print()` with a print stylesheet that strips the footer and force-expands all `Read more` panels. Worth adding because results are ephemeral.
+- "Print results" button at the bottom (Inter caps, terracotta) that triggers `window.print()`. A `@media print` block in the global stylesheet hides the footer and "Back to slideshow" link, force-expands all `Read more` panels, normalizes background to white, removes shadows, and adds page-break hints between major sections so a metric card doesn't split across pages. No JS state changes — pure media query. **In scope for v1.**
 
 Slideshow and full-results share components: `ProfileHero`, `MetricCard`, `SuggestionCard`, `InteractionItem`, `HangingNumberList`. The two views are layouts over a single component library.
 
@@ -352,7 +352,6 @@ This addition is a load-bearing reason for the score visualization choice in §7
 - **Model upgrade path.** Sonnet 4.6 is the v1 default. If the senior project demo shows scoring quality is the marginal axis, switching `CHAT_MODEL` in `lib/config.ts` to `claude-opus-4-7` is a one-line change. Cost difference is meaningful (~5–8×) but the cache hit on the system prompt softens it for repeat users.
 - **Profile-type ceremony.** The profile reveal slide carries the most product weight. If the entrance animation feels under- or over-tuned during implementation, expect to iterate on it. Acceptable to adjust without re-spec.
 - **Feedback link.** The Feedback footer panel ends with a placeholder until the user provides a Google Form URL.
-- **Print stylesheet.** Optional but worth ~30 minutes for the full-scroll view.
 
 ## 13. Testing plan
 
