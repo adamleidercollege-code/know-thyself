@@ -1,7 +1,7 @@
 import React from "react";
 
 export type FooterSection = {
-  id: "how" | "sources" | "limitations" | "privacy" | "about" | "feedback";
+  id: "how" | "sources" | "limitations" | "privacy" | "about" | "feedback" | "resources";
   title: string;
   body: React.ReactNode;
 };
@@ -197,6 +197,49 @@ export const FOOTER_SECTIONS: FooterSection[] = [
             style: { color: "#0066cc", textDecoration: "underline" },
           },
           "Google Form"
+        )
+      )
+    ),
+  },
+  {
+    id: "resources",
+    title: "Project Resources",
+    body: React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(
+        "p",
+        null,
+        "The full system prompt and judge model prompt that power this assessment are available for review:"
+      ),
+      React.createElement(
+        "p",
+        null,
+        React.createElement(
+          "a",
+          {
+            href: "https://docs.google.com/document/d/1aVsmQjNdHfUfzTP_-MNoVk84OjkqE62IpZFd2vius4k/edit?tab=t.0",
+            className: "feedback-link",
+            target: "_blank",
+            rel: "noopener noreferrer",
+            style: { color: "#0066cc", textDecoration: "underline" },
+          },
+          "System Prompt"
+        )
+      ),
+      React.createElement(
+        "p",
+        null,
+        React.createElement(
+          "a",
+          {
+            href: "https://docs.google.com/document/d/1UdIII8JZpHR00jGAGZGvy--el76Yz4wzhoHwGr6UX4E/edit?tab=t.0",
+            className: "feedback-link",
+            target: "_blank",
+            rel: "noopener noreferrer",
+            style: { color: "#0066cc", textDecoration: "underline" },
+          },
+          "Judge Prompt"
         )
       )
     ),
