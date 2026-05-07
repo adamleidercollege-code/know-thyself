@@ -88,4 +88,35 @@ Let me put your results together now.`;
     const text = "I have a clear picture now — putting your results together.";
     expect(sanitizeAssistantText(text)).toBe(text);
   });
+
+  it("strips planning/tracking statements that name a metric", () => {
+    expect(sanitizeAssistantText("One more question needed for Emotional Regulation.")).toBe("");
+    expect(sanitizeAssistantText("I need one more question on Anxiety.")).toBe("");
+    expect(sanitizeAssistantText("Need to probe Self-Efficacy further.")).toBe("");
+    expect(sanitizeAssistantText("Anxiety is well-covered.")).toBe("");
+    expect(sanitizeAssistantText("Moving on to Growth Mindset next.")).toBe("");
+    expect(sanitizeAssistantText("Locus of Control is sufficiently covered.")).toBe("");
+    expect(sanitizeAssistantText("I'll follow up on Metacognition.")).toBe("");
+  });
+
+  it("strips question-tally statements even without a metric name", () => {
+    expect(sanitizeAssistantText("One more question needed.")).toBe("");
+    expect(sanitizeAssistantText("Just need another question to wrap up.")).toBe("");
+    expect(sanitizeAssistantText("Two questions remaining.")).toBe("");
+  });
+
+  it("keeps a planning/tracking paragraph stripped, then keeps the actual question", () => {
+    const text = `One more question needed for Emotional Regulation.
+
+When something hits you emotionally, what do you usually do with it?`;
+    expect(sanitizeAssistantText(text)).toBe(
+      "When something hits you emotionally, what do you usually do with it?",
+    );
+  });
+
+  it("during streaming, suppresses partial planning text like 'One more question'", () => {
+    expect(sanitizeAssistantText("One more questi", true)).toBe("");
+    expect(sanitizeAssistantText("Need to probe Anxiety", true)).toBe("");
+    expect(sanitizeAssistantText("Moving on to Growth", true)).toBe("");
+  });
 });

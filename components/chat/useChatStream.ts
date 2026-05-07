@@ -64,9 +64,17 @@ export function useChatStream(initial: ChatMessage[] = []) {
     let streamDone = false;
 
     let displayed = "";
+    let finalizingFlipped = false;
     const pumpDone = new Promise<void>((resolve) => {
       const id = setInterval(() => {
         const target = sanitizeAssistantText(assistantText, !streamDone);
+        // Flip to "finalizing" the moment the streamed text is recognizable as
+        // a closing statement so the pulse dots render alongside the closing
+        // line as it types out, not after the stream finishes.
+        if (!finalizingFlipped && looksLikeClosing(target)) {
+          finalizingFlipped = true;
+          setStatus("finalizing");
+        }
         if (displayed.length > target.length) {
           displayed = target;
           setPending(displayed);
