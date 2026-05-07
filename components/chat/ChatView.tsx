@@ -31,7 +31,12 @@ export function ChatView({ onAssessmentReady }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 80px)", maxHeight: "calc(100dvh - 80px)", maxWidth: 720, margin: "0 auto", width: "100%", minHeight: 0, overflow: "hidden" }}>
       <div className="label" style={{ padding: "16px 24px 0" }}>Know Thyself</div>
-      <MessageList messages={messages} pending={pending ?? undefined} showTypingIndicator={status === "streaming"} />
+      <MessageList
+        messages={messages}
+        pending={pending ?? undefined}
+        showTypingIndicator={status === "streaming"}
+        showFinalizingIndicator={status === "finalizing"}
+      />
       {error ? (
         <div style={{ padding: 16, textAlign: "center" }}>
           <p style={{ color: "var(--color-muted)", marginBottom: 12 }}>{error}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import type { ChatMessage } from "./types";
 import { sanitizeAssistantText } from "./sanitize";
 
@@ -8,15 +9,16 @@ type Props = {
   messages: ChatMessage[];
   pending?: string;
   showTypingIndicator?: boolean;
+  showFinalizingIndicator?: boolean;
 };
 
-export function MessageList({ messages, pending, showTypingIndicator }: Props) {
+export function MessageList({ messages, pending, showTypingIndicator, showFinalizingIndicator }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages, pending, showTypingIndicator]);
+  }, [messages, pending, showTypingIndicator, showFinalizingIndicator]);
 
   const hasPendingText = pending !== undefined && pending.length > 0;
   const lastIsUser = messages[messages.length - 1]?.role === "user";
@@ -58,6 +60,38 @@ export function MessageList({ messages, pending, showTypingIndicator }: Props) {
           }}
         >
           …
+        </div>
+      )}
+      {showFinalizingIndicator && (
+        <div
+          aria-label="Preparing your results"
+          style={{
+            alignSelf: "flex-start",
+            display: "flex",
+            gap: 6,
+            paddingTop: 2,
+          }}
+        >
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              aria-hidden
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: "50%",
+                background: "var(--color-tertiary)",
+                display: "inline-block",
+              }}
+              animate={{ opacity: [0.25, 1, 0.25] }}
+              transition={{
+                duration: 1.2,
+                repeat: Infinity,
+                delay: i * 0.18,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

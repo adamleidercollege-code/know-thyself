@@ -59,4 +59,33 @@ How do you usually feel going into a real challenge?`;
     const text = "Tell me about a time when Anxiety surprised you.";
     expect(sanitizeAssistantText(text)).toBe(text);
   });
+
+  it("strips prose-form internal review before the closing line", () => {
+    const text = `All metrics have directional scores and populated notes. Emotional Regulation at 3 has genuine tension between awareness and follow-through.
+
+That gives me a good picture — I'll put your results together now.`;
+    expect(sanitizeAssistantText(text)).toBe(
+      "That gives me a good picture — I'll put your results together now.",
+    );
+  });
+
+  it("strips multi-paragraph internal review prose", () => {
+    const text = `Across all eight metrics, the picture is consistent.
+
+Anxiety scores of 4 reinforce the Attentional Control signal.
+
+Let me put your results together now.`;
+    expect(sanitizeAssistantText(text)).toBe("Let me put your results together now.");
+  });
+
+  it("during streaming, suppresses partial internal review like 'Emotional Regulation at'", () => {
+    expect(sanitizeAssistantText("All metrics", true)).toBe("");
+    expect(sanitizeAssistantText("Emotional Regulation at", true)).toBe("");
+    expect(sanitizeAssistantText("Anxiety scor", true)).toBe("");
+  });
+
+  it("keeps a closing statement that mentions a metric without review vocab", () => {
+    const text = "I have a clear picture now — putting your results together.";
+    expect(sanitizeAssistantText(text)).toBe(text);
+  });
 });
