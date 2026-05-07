@@ -40,7 +40,14 @@ export function ChatView({ onAssessmentReady }: Props) {
           </button>
         </div>
       ) : (
-        <Composer disabled={status === "streaming" || status === "tool_received"} onSend={(t) => void send(t)} />
+        <Composer
+          disabled={
+            status === "streaming" ||
+            status === "finalizing" ||
+            status === "tool_received"
+          }
+          onSend={(t) => void send(t)}
+        />
       )}
     </div>
   );

@@ -4,11 +4,33 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "./types";
 import { sanitizeAssistantText } from "./sanitize";
 
-type Status = "idle" | "streaming" | "tool_received" | "error";
+type Status = "idle" | "streaming" | "finalizing" | "tool_received" | "error";
 
 type ToolPayload = { toolName: string; input: unknown };
 
 const MAX_INVISIBLE_RETRIES = 2;
+
+function looksLikeAssessmentInput(input: unknown): boolean {
+  return (
+    typeof input === "object" &&
+    input !== null &&
+    Array.isArray((input as { metrics?: unknown }).metrics)
+  );
+}
+
+// Closing-statement vocabulary from the system prompt's example pattern
+// ("That gives me a good picture — I'll put your results together now.").
+// Requiring one of these words avoids false-firing on imperative questions
+// like "Walk me through your typical week" that omit the question mark.
+const CLOSING_VOCAB_RX =
+  /\b(results?|together|wrap[\w-]*|finished|complete[d]?|good picture|synthesi[sz]e|put together|all set)\b/i;
+
+function looksLikeClosing(visibleText: string): boolean {
+  const t = visibleText.trim();
+  if (t.length < 4) return false;
+  if (t.includes("?")) return false;
+  return CLOSING_VOCAB_RX.test(t);
+}
 
 export function useChatStream(initial: ChatMessage[] = []) {
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
@@ -144,13 +166,42 @@ export function useChatStream(initial: ChatMessage[] = []) {
     }
     setPending(null);
 
-    if (stopReason === "tool_use" && toolName) {
+    // Inline tool call succeeded with parseable, structurally-valid input.
+    if (stopReason === "tool_use" && toolName && toolInputBuffer) {
       try {
         const input = JSON.parse(toolInputBuffer);
-        setTool({ toolName, input });
+        if (looksLikeAssessmentInput(input)) {
+          setTool({ toolName, input });
+          setStatus("tool_received");
+          return;
+        }
+      } catch {
+        // Tool JSON likely truncated by max_tokens — fall through to finalize.
+      }
+    }
+
+    // Closing turn detected (statement, no question). Force the tool call via
+    // /api/finalize, which uses tool_choice + a larger max_tokens budget so
+    // the JSON cannot be truncated mid-stream.
+    const visible = sanitizeAssistantText(assistantText);
+    if (looksLikeClosing(visible)) {
+      setStatus("finalizing");
+      const transcriptForFinalize = assistantText
+        ? [...nextHistory, { role: "assistant" as const, content: assistantText }]
+        : nextHistory;
+      try {
+        const res = await fetch("/api/finalize", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ messages: transcriptForFinalize }),
+        });
+        if (!res.ok) throw new Error(`finalize HTTP ${res.status}`);
+        const data = (await res.json()) as { assessment?: unknown; error?: string };
+        if (!data.assessment) throw new Error(data.error ?? "finalize: no assessment");
+        setTool({ toolName: "submit_assessment", input: data.assessment });
         setStatus("tool_received");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "bad tool JSON");
+        setError(err instanceof Error ? err.message : "finalize error");
         setStatus("error");
       }
       return;
@@ -161,7 +212,6 @@ export function useChatStream(initial: ChatMessage[] = []) {
     // a filler message. Cap retries to avoid loops. Defer to a macrotask so
     // the just-scheduled setMessages commit before sendRef.current is read —
     // otherwise the retry would refetch with stale history.
-    const visible = sanitizeAssistantText(assistantText);
     if (assistantText && !visible && invisibleRetriesRef.current < MAX_INVISIBLE_RETRIES) {
       invisibleRetriesRef.current += 1;
       setTimeout(() => {

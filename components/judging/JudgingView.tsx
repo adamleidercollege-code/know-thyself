@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 import type { Assessment } from "@/lib/schema";
 import type { ChatMessage } from "@/components/chat/types";
 
@@ -33,18 +34,39 @@ export function JudgingView({ transcript, draftJson, onResults }: Props) {
   return (
     <div
       style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
         minHeight: "calc(100vh - 80px)", padding: 24, textAlign: "center",
+        gap: 28,
       }}
     >
       <p
         style={{
           fontFamily: "var(--font-serif)", fontStyle: "italic",
-          fontSize: 22, color: "var(--color-ink)",
+          fontSize: 22, color: "var(--color-ink)", margin: 0,
         }}
       >
         Putting your results together…
       </p>
+      <motion.div
+        aria-hidden
+        style={{
+          height: 1,
+          width: 96,
+          background: "var(--color-ink)",
+          transformOrigin: "center",
+        }}
+        initial={{ scaleX: 0.3, opacity: 0.35 }}
+        animate={{
+          scaleX: [0.3, 1, 0.3],
+          opacity: [0.35, 0.95, 0.35],
+        }}
+        transition={{
+          duration: 1.8,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
     </div>
   );
 }
