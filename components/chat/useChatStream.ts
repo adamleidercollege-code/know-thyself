@@ -159,6 +159,44 @@ export function useChatStream(initial: ChatMessage[] = []) {
     }
 
     streamDone = true;
+
+    // Decide what comes next as soon as the stream ends — before awaiting the
+    // typewriter — so the finalizing dots can render alongside the closing
+    // statement instead of after it finishes typing. Also lets us race the
+    // finalize fetch against the typewriter for snappier perceived latency.
+    let inlineToolInput: unknown = null;
+    if (stopReason === "tool_use" && toolName && toolInputBuffer) {
+      try {
+        const parsed = JSON.parse(toolInputBuffer);
+        if (looksLikeAssessmentInput(parsed)) inlineToolInput = parsed;
+      } catch {
+        // Tool JSON likely truncated by max_tokens — fall through to finalize.
+      }
+    }
+
+    const visibleNow = sanitizeAssistantText(assistantText);
+    const willFinalize = inlineToolInput === null && looksLikeClosing(visibleNow);
+
+    let finalizePromise: Promise<unknown> | null = null;
+    if (willFinalize) {
+      // Flip status before awaiting the typewriter so the dots appear in sync
+      // with the closing line as it renders, not after.
+      setStatus("finalizing");
+      const transcriptForFinalize = assistantText
+        ? [...nextHistory, { role: "assistant" as const, content: assistantText }]
+        : nextHistory;
+      finalizePromise = fetch("/api/finalize", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: transcriptForFinalize }),
+      }).then(async (res) => {
+        if (!res.ok) throw new Error(`finalize HTTP ${res.status}`);
+        const data = (await res.json()) as { assessment?: unknown; error?: string };
+        if (!data.assessment) throw new Error(data.error ?? "finalize: no assessment");
+        return data.assessment;
+      });
+    }
+
     await pumpDone;
 
     if (assistantText) {
@@ -166,39 +204,16 @@ export function useChatStream(initial: ChatMessage[] = []) {
     }
     setPending(null);
 
-    // Inline tool call succeeded with parseable, structurally-valid input.
-    if (stopReason === "tool_use" && toolName && toolInputBuffer) {
-      try {
-        const input = JSON.parse(toolInputBuffer);
-        if (looksLikeAssessmentInput(input)) {
-          setTool({ toolName, input });
-          setStatus("tool_received");
-          return;
-        }
-      } catch {
-        // Tool JSON likely truncated by max_tokens — fall through to finalize.
-      }
+    if (inlineToolInput !== null && toolName) {
+      setTool({ toolName, input: inlineToolInput });
+      setStatus("tool_received");
+      return;
     }
 
-    // Closing turn detected (statement, no question). Force the tool call via
-    // /api/finalize, which uses tool_choice + a larger max_tokens budget so
-    // the JSON cannot be truncated mid-stream.
-    const visible = sanitizeAssistantText(assistantText);
-    if (looksLikeClosing(visible)) {
-      setStatus("finalizing");
-      const transcriptForFinalize = assistantText
-        ? [...nextHistory, { role: "assistant" as const, content: assistantText }]
-        : nextHistory;
+    if (finalizePromise) {
       try {
-        const res = await fetch("/api/finalize", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ messages: transcriptForFinalize }),
-        });
-        if (!res.ok) throw new Error(`finalize HTTP ${res.status}`);
-        const data = (await res.json()) as { assessment?: unknown; error?: string };
-        if (!data.assessment) throw new Error(data.error ?? "finalize: no assessment");
-        setTool({ toolName: "submit_assessment", input: data.assessment });
+        const assessment = await finalizePromise;
+        setTool({ toolName: "submit_assessment", input: assessment });
         setStatus("tool_received");
       } catch (err) {
         setError(err instanceof Error ? err.message : "finalize error");
@@ -212,7 +227,7 @@ export function useChatStream(initial: ChatMessage[] = []) {
     // a filler message. Cap retries to avoid loops. Defer to a macrotask so
     // the just-scheduled setMessages commit before sendRef.current is read —
     // otherwise the retry would refetch with stale history.
-    if (assistantText && !visible && invisibleRetriesRef.current < MAX_INVISIBLE_RETRIES) {
+    if (assistantText && !visibleNow && invisibleRetriesRef.current < MAX_INVISIBLE_RETRIES) {
       invisibleRetriesRef.current += 1;
       setTimeout(() => {
         void sendRef.current?.(null);
