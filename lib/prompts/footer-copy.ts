@@ -169,7 +169,7 @@ export const FOOTER_SECTIONS: FooterSection[] = [
     body: React.createElement(
       "p",
       null,
-      "Know Thyself is a research project exploring how artificial intelligence can be used to assess cognitive and psychological patterns through adaptive conversation. It was developed as part of an undergraduate senior project and is intended as a proof of concept rather than a production mental health tool. If you have feedback on your experience or the accuracy of your results, please use the link below."
+      "Know Thyself is a research project exploring how artificial intelligence can be used to assess cognitive and psychological patterns through adaptive conversation. It was developed as a final project for IPHS 300 at Kenyon College and is intended as a proof of concept rather than a clinical mental health tool. If you have feedback on your experience or the accuracy of your results, please use the link in the Feedback section."
     ),
   },
   {
